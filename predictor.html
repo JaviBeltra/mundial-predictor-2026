@@ -499,8 +499,10 @@ body::before{
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 import {
-  getAuth, onAuthStateChanged, signInWithRedirect, getRedirectResult,
-  GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  getAuth, onAuthStateChanged,
+  signInWithPopup, signInWithRedirect, getRedirectResult,
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
   updateProfile, signOut, sendPasswordResetEmail
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
@@ -771,30 +773,38 @@ function clearErr(){ document.getElementById('auth-err').style.display='none'; }
 function showLogin(){ document.getElementById('loading').style.display='none'; document.getElementById('login-screen').style.display='flex'; document.getElementById('app').style.display='none'; }
 function showLoading(){ document.getElementById('loading').style.display='flex'; document.getElementById('login-screen').style.display='none'; }
 
-// ── Google Sign-In: popup first (Chrome/Android), fallback to redirect (Safari) ──
-document.getElementById('btn-google').onclick = async () => {
+// ── Google Sign-In ──
+// Detect Safari/WebKit to choose popup vs redirect
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+document.getElementById('btn-google').addEventListener('click', async () => {
   clearErr();
-  try {
-    // Try popup first — works on Chrome, Firefox, most Android browsers
-    await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js')
-      .then(m => m.signInWithPopup(auth, gProv));
-  } catch(e) {
-    if(e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-      // Popup blocked (Safari, some mobile) → fall back to redirect
-      try { signInWithRedirect(auth, gProv); }
-      catch(e2){ showErr('No se pudo iniciar sesión con Google. Intentá con email.'); }
-    } else if(e.code !== 'auth/popup-closed-by-user') {
-      showErr('Error al iniciar sesión con Google.');
+  if(isSafari){
+    // Safari blocks popups → use redirect directly
+    try { await signInWithRedirect(auth, gProv); }
+    catch(e){ showErr('No se pudo iniciar sesión con Google.'); }
+  } else {
+    // Chrome, Firefox, Android → use popup
+    try {
+      await signInWithPopup(auth, gProv);
+    } catch(e) {
+      if(e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request'){
+        // Popup blocked → fallback to redirect
+        try { await signInWithRedirect(auth, gProv); }
+        catch(e2){ showErr('No se pudo iniciar sesión con Google.'); }
+      } else if(e.code !== 'auth/popup-closed-by-user'){
+        showErr('Error al iniciar sesión con Google. Código: ' + (e.code||'desconocido'));
+      }
     }
   }
-};
+});
 
-// ── Handle redirect result (Safari fallback) ──
+// ── Handle redirect result on page load (Safari) ──
 getRedirectResult(auth).then(result => {
-  // If came back from a Google redirect, onAuthStateChanged handles the rest
+  // onAuthStateChanged handles the session automatically
 }).catch(e => {
-  if(e.code && e.code !== 'auth/no-current-user') {
-    showErr('Error al iniciar sesión con Google. Intentá con email.');
+  if(e.code && e.code !== 'auth/no-current-user' && e.code !== 'auth/null-user'){
+    console.warn('Redirect result error:', e.code);
   }
 });
 
@@ -843,28 +853,32 @@ document.getElementById('toggle-link').onclick = () => {
 };
 
 // ── Forgot password ──
-document.getElementById('forgot-link').onclick = async () => {
+async function handleForgotPassword(e){
+  e.preventDefault();
   const email = document.getElementById('inp-email').value.trim();
   if(!email){
-    showErr('Ingresá tu correo electrónico primero');
+    showErr('Ingresá tu correo electrónico arriba primero');
     return;
   }
   try {
     await sendPasswordResetEmail(auth, email);
     clearErr();
-    document.getElementById('auth-err').style.display = 'block';
-    document.getElementById('auth-err').style.background = 'rgba(34,197,94,.1)';
-    document.getElementById('auth-err').style.borderColor = 'rgba(34,197,94,.3)';
-    document.getElementById('auth-err').style.color = '#86EFAC';
-    document.getElementById('auth-err').textContent = '✅ Te enviamos un email para restablecer tu contraseña.';
-  } catch(e) {
+    const errEl = document.getElementById('auth-err');
+    errEl.style.display = 'block';
+    errEl.style.background = 'rgba(34,197,94,.1)';
+    errEl.style.borderColor = 'rgba(34,197,94,.3)';
+    errEl.style.color = '#86EFAC';
+    errEl.textContent = '✅ Revisá tu correo — te enviamos el link para restablecer tu contraseña.';
+  } catch(err){
     const msgs = {
-      'auth/user-not-found': 'No existe una cuenta con ese correo',
-      'auth/invalid-email': 'Correo electrónico no válido',
+      'auth/user-not-found':'No existe una cuenta con ese correo',
+      'auth/invalid-email':'Correo electrónico no válido',
+      'auth/missing-email':'Ingresá tu correo electrónico arriba primero',
     };
-    showErr(msgs[e.code] || 'Error al enviar el email. Intentá de nuevo.');
+    showErr(msgs[err.code] || 'Error al enviar el email. Intentá de nuevo.');
   }
-};
+}
+document.getElementById('forgot-link')?.addEventListener('click', handleForgotPassword);
 
 // ── Enter key on inputs ──
 ['inp-email','inp-pass','inp-name'].forEach(id => {

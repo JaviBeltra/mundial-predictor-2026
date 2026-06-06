@@ -152,13 +152,17 @@ body::before{
 .nav{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 .nav::-webkit-scrollbar{display:none;}
 .nav-tab{
-  padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.05);color:rgba(245,245,248,.7);
+  padding:7px 14px;border-radius:8px;border:1px solid rgba(245,200,66,.2);
+  background:rgba(245,200,66,.05);color:rgba(245,200,66,.7);
   font-family:var(--font);font-size:12px;font-weight:500;
-  cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0;
+  cursor:pointer;white-space:nowrap;transition:all .3s;flex-shrink:0;
 }
-.nav-tab:hover{background:rgba(255,255,255,.1);color:var(--text);}
-.nav-tab.active{background:var(--gold);color:#0a0a0a;font-weight:700;border-color:var(--gold);}
+.nav-tab:hover{background:rgba(245,200,66,.12);color:var(--gold);border-color:rgba(245,200,66,.4);}
+.nav-tab.active{
+  background:rgba(245,200,66,.15);color:var(--gold);font-weight:700;
+  border-color:var(--gold);
+  box-shadow:0 0 10px rgba(245,200,66,.4),0 0 20px rgba(245,200,66,.15);
+}
 
 /* ── CONTENT ── */
 .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));}
@@ -205,7 +209,7 @@ body::before{
   background:rgba(240,180,41,.12);color:var(--gold);
 }
 .match-date{font-size:11px;color:var(--muted);}
-.match-pts-unused{
+.match-pts-removed{
   font-size:10px;font-weight:700;color:var(--gold);
   background:rgba(240,180,41,.1);padding:3px 8px;border-radius:20px;
 }
@@ -324,20 +328,21 @@ body::before{
 /* ── RANDOM BUTTONS ── */
 .btn-azar{
   width:100%;margin-bottom:8px;padding:14px;border-radius:12px;
-  border:none;background:linear-gradient(135deg,var(--red),#A01E14);
-  color:#0a0a0a;font-family:var(--font);font-weight:700;font-size:14px;
+  border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);
+  color:rgba(255,255,255,.9);font-family:var(--font);font-weight:600;font-size:14px;
   cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
-  box-shadow:0 4px 20px rgba(240,180,41,.35);transition:all .2s;
+  transition:all .2s;
 }
-.btn-azar:hover{filter:brightness(1.08);}
+.btn-azar:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);}
 .btn-clear{
-  width:100%;margin-bottom:12px;padding:11px;border-radius:12px;
-  border:none;background:linear-gradient(135deg,#EF4444,#B91C1C);
-  color:#fff;font-family:var(--font);font-weight:700;font-size:13px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
-  box-shadow:0 4px 14px rgba(239,68,68,.3);transition:all .2s;
+  width:100%;margin-bottom:12px;padding:13px;border-radius:12px;
+  border:none;background:linear-gradient(135deg,#D52B1E,#A01E14);
+  color:#fff;font-family:var(--font);font-weight:700;font-size:14px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 16px rgba(213,43,30,.4);transition:all .2s;
 }
 .btn-clear:hover{filter:brightness(1.1);}
+.btn-clear:disabled,.btn-clear[disabled]{opacity:.35;cursor:default;box-shadow:none;}
 
 /* ── TROPHY CARD ── */
 .trophy-card{
@@ -409,6 +414,10 @@ body::before{
 }
 @keyframes spin{to{transform:rotate(360deg);}}
 #loading p{font-size:13px;color:var(--muted);}
+@keyframes tabBlink{
+  0%,100%{box-shadow:0 0 6px rgba(245,200,66,.3);border-color:rgba(245,200,66,.4);}
+  50%{box-shadow:0 0 14px rgba(245,200,66,.7);border-color:var(--gold);background:rgba(245,200,66,.15);}
+}
 </style>
 </head>
 <body>
@@ -1179,25 +1188,70 @@ function renderInicio(){
   const myPreds=uid?(S.preds[uid]||{}):{};
   const filled=Object.values(myPreds).filter(p=>p&&p.s1!=null).length;
   const sc=uid?calcScore(uid):{total:0};
+  const trivPts=getMyTriviaPoints();
   const rank=getMyRank();
   const champion=getMyChampion();
+
+  // ── Trivia card ──
+  const tq=getTodayTrivia();
+  const myAns=getMyTriviaAnswer(tq.day);
+  const answered=myAns!==null;
+  const correct=answered&&myAns===tq.ans;
+  const topicBorder={'Paraguay':'rgba(213,43,30,.4)','Historia':'rgba(43,95,217,.4)','2026':'rgba(34,197,94,.4)'};
+  const topicBg={'Paraguay':'rgba(213,43,30,.12)','Historia':'rgba(43,95,217,.12)','2026':'rgba(34,197,94,.12)'};
+  const topicColor={'Paraguay':'#FF7070','Historia':'#93B8FF','2026':'#86EFAC'};
+  const triviaCard=`<div style="background:var(--card);border:1px solid ${topicBorder[tq.topic]||'var(--border)'};border-radius:var(--radius);padding:16px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:18px;">🧠</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#F5F5F8;">Trivia del día</div>
+          <div style="font-size:10px;color:var(--muted);">Cada día una nueva pregunta • +${TRIVIA_PTS} pts</div>
+        </div>
+      </div>
+      <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:${topicBg[tq.topic]};color:${topicColor[tq.topic]};border:1px solid ${topicBorder[tq.topic]};">${tq.topic}</span>
+    </div>
+    <div style="font-size:14px;font-weight:600;color:#F5F5F8;margin-bottom:12px;line-height:1.4;">${tq.q}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${tq.opts.map((opt,i)=>{
+        let bg='rgba(255,255,255,.05)',border='rgba(255,255,255,.1)',color='rgba(245,245,248,.8)',icon='';
+        if(answered){
+          if(i===tq.ans){bg='rgba(34,197,94,.15)';border='rgba(34,197,94,.5)';color='#86EFAC';icon='✅ ';}
+          else if(i===myAns&&myAns!==tq.ans){bg='rgba(239,68,68,.12)';border='rgba(239,68,68,.4)';color='#FCA5A5';icon='❌ ';}
+        }
+        const onclick=answered?'':'onclick="window.answerTrivia('+tq.day+','+i+')"';
+        return '<button '+onclick+' style="text-align:left;padding:10px 12px;border-radius:10px;border:1px solid '+border+';background:'+bg+';color:'+color+';font-family:var(--font);font-size:13px;cursor:'+(answered?'default':'pointer')+';width:100%;">'+icon+opt+'</button>';
+      }).join('')}
+    </div>
+    ${answered?'<div style="margin-top:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05);font-size:12px;color:rgba(245,245,248,.65);line-height:1.5;">💡 '+tq.exp+'</div>':''}
+    ${answered&&correct?'<div style="margin-top:8px;text-align:center;font-size:12px;color:#86EFAC;font-weight:600;">+'+TRIVIA_PTS+' puntos ganados 🎉</div>':''}
+  </div>`;
+
+  // ── Prize box — same style as Reglas, Paraguay colors ──
+  const prizeBox=`<div style="margin-top:16px;background:linear-gradient(135deg,rgba(213,43,30,.12),rgba(0,56,168,.08));border:1px solid rgba(213,43,30,.3);border-radius:var(--radius);padding:20px;text-align:center;">
+    <div style="font-size:32px;margin-bottom:8px;">🎁</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);margin-bottom:4px;">El Premio</div>
+    <div style="font-size:12px;color:var(--muted);">Se revelará al inicio del Mundial 2026</div>
+  </div>`;
+
   return `<div style="padding-bottom:8px;">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;line-height:1;margin-bottom:4px;">Hola, ${S.displayName.split(' ')[0]}</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">${isLocked()?'🔒 El torneo comenzó. Tus predicciones están cerradas.':'✅ El torneo aún no empezó. Podés modificar tus predicciones.'}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Predicciones</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--gold);">${filled}</div>
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Puntos</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--gold);">${sc.total}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--gold);">${sc.total+trivPts}</div>
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Posición</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--gold);">${rank}</div>
       </div>
     </div>
+    ${triviaCard}
     ${champion?`<div class="trophy-card">
       <div class="tf-bg" style="background-image:url(https://flagcdn.com/w320/${FLAGS[champion]||'un'}.png)"></div>
       <div class="tf-ov"></div><div class="tf-glow"></div>
@@ -1206,54 +1260,8 @@ function renderInicio(){
       <img class="tf-flag" src="https://flagcdn.com/w80/${FLAGS[champion]||'un'}.png" alt="${champion}"/>
       <div class="tf-name">${champion.toUpperCase()}</div>
       <div class="tf-sub">Campeón del Mundo</div>
-    </div>`:`<div class="banner info">🏆 Completá el partido de la Final para ver tu campeón aquí.</div>`}
-
-    <!-- PRIZE BOX — Paraguay gift wrap -->
-    <div style="margin-top:16px;position:relative;border-radius:16px;overflow:hidden;text-align:center;">
-      <!-- Gift box SVG with Paraguay colors -->
-      <svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" style="width:60%;max-width:220px;display:block;margin:0 auto;">
-        <!-- Box body: white background with red/blue/white stripes (Paraguay flag pattern) -->
-        <rect x="20" y="80" width="280" height="110" rx="6" fill="#fff"/>
-        <!-- Horizontal stripes on box body -->
-        <rect x="20" y="80" width="280" height="37" rx="0" fill="#D52B1E"/>
-        <rect x="20" y="117" width="280" height="36" fill="#fff"/>
-        <rect x="20" y="153" width="280" height="37" rx="0" fill="#0038A8"/>
-        <!-- Round corners mask bottom -->
-        <rect x="20" y="175" width="280" height="15" rx="6" fill="#0038A8"/>
-        <!-- Box lid: white with stripes -->
-        <rect x="10" y="58" width="300" height="30" rx="6" fill="#fff"/>
-        <rect x="10" y="58" width="300" height="10" rx="6" fill="#D52B1E"/>
-        <rect x="10" y="68" width="300" height="10" fill="#fff"/>
-        <rect x="10" y="78" width="300" height="10" rx="0" fill="#0038A8"/>
-        <!-- Vertical ribbon on box body (white stripe down center) -->
-        <rect x="145" y="80" width="30" height="110" fill="rgba(255,255,255,.35)"/>
-        <!-- Vertical ribbon on lid -->
-        <rect x="145" y="58" width="30" height="30" fill="rgba(255,255,255,.35)"/>
-        <!-- Horizontal ribbon band -->
-        <rect x="20" y="107" width="280" height="18" fill="rgba(255,255,255,.25)"/>
-        <!-- BOW — centered on top of lid -->
-        <!-- Left loop -->
-        <ellipse cx="138" cy="45" rx="28" ry="14" fill="#D52B1E" transform="rotate(-20,138,45)"/>
-        <ellipse cx="138" cy="45" rx="20" ry="9" fill="#B01818" transform="rotate(-20,138,45)"/>
-        <!-- Right loop -->
-        <ellipse cx="182" cy="45" rx="28" ry="14" fill="#D52B1E" transform="rotate(20,182,45)"/>
-        <ellipse cx="182" cy="45" rx="20" ry="9" fill="#B01818" transform="rotate(20,182,45)"/>
-        <!-- Left tail -->
-        <path d="M155 58 Q130 75 118 85" stroke="#D52B1E" stroke-width="8" fill="none" stroke-linecap="round"/>
-        <!-- Right tail -->
-        <path d="M165 58 Q190 75 202 85" stroke="#D52B1E" stroke-width="8" fill="none" stroke-linecap="round"/>
-        <!-- Center knot -->
-        <ellipse cx="160" cy="52" rx="14" ry="10" fill="#D52B1E"/>
-        <ellipse cx="160" cy="52" rx="8" ry="6" fill="#FF4040"/>
-        <!-- White highlight on bow -->
-        <ellipse cx="155" cy="48" rx="4" ry="3" fill="rgba(255,255,255,.3)" transform="rotate(-10,155,48)"/>
-      </svg>
-      <!-- Text overlay -->
-      <div style="background:linear-gradient(180deg,rgba(9,9,15,0) 0%,rgba(9,9,15,.95) 40%,#09090F 100%);margin-top:-60px;padding:20px 20px 24px;position:relative;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:#fff;margin-bottom:6px;">El Premio</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.6;">Se revelará al inicio del<br>Mundial 2026 — 11 de junio</div>
-      </div>
-    </div>
+    </div>`:`<div class="banner info" style="margin-top:16px;">🏆 Completá el partido de la Final para ver tu campeón aquí.</div>`}
+    ${prizeBox}
   </div>`;
 }
 
@@ -1406,19 +1414,19 @@ function renderStats(){
     return `<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);display:grid;grid-template-columns:1fr 40px 40px 40px;gap:12px;align-items:center;">
       <div><div style="font-size:13px;font-weight:500;color:var(--text);">${PHASES[ph].label}</div>
       <div style="height:4px;border-radius:2px;background:rgba(255,255,255,.08);margin-top:6px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:var(--red);border-radius:2px;"></div></div></div>
-      <div style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red);">${hits}</div>
-      <div style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);">${exact}</div>
-      <div style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text);">${pts}</div>
+      <div style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);">${hits}</div>
+      <div style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:#22C55E;">${exact}</div>
+      <div style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red);">${pts}</div>
     </div>`;
   }).join('');
   return `<div style="padding-bottom:24px;">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:var(--text);margin-bottom:20px;">Mis Estadísticas</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-      ${[['Posición',rank,'var(--gold)'],['Puntos',sc.total,'var(--text)'],['Aciertos',sc.hits,'var(--text)'],['Exactos ⭐',sc.exact,'var(--gold)'],['Predicciones',sc.pred,'var(--text)'],['% acierto',sc.pred>0?Math.round(sc.hits/sc.pred*100)+'%':'—','var(--text)']].map(([l,v,c])=>`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${l}</div><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${c};">${v}</div></div>`).join('')}
+      ${[['Posición',rank,'#3B8BFF'],['Puntos',sc.total,'var(--text)'],['Aciertos',sc.hits,'var(--gold)'],['Exactos ⭐',sc.exact,'#22C55E'],['Predicciones',sc.pred,'var(--text)'],['% acierto',sc.pred>0?Math.round(sc.hits/sc.pred*100)+'%':'—','var(--text)']].map(([l,v,c])=>`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${l}</div><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${c};">${v}</div></div>`).join('')}
     </div>
     ${myIdx>0?`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:11px;color:var(--muted);">Para superar a</div><div style="font-size:14px;font-weight:600;">${above}</div></div><div style="text-align:right;"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red);">+${diff}</div><div style="font-size:10px;color:var(--muted);">puntos necesarios</div></div></div>`:'<div class="banner open" style="margin-bottom:16px;">🥇 Sos el líder de la tabla.</div>'}
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-      <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:grid;grid-template-columns:1fr 40px 40px 40px;gap:12px;"><span>Fase</span><span style="text-align:center">✓</span><span style="text-align:center">★</span><span style="text-align:center">Pts</span></div>
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:grid;grid-template-columns:1fr 40px 40px 40px;gap:12px;"><span style="color:var(--muted)">Fase</span><span style="text-align:center;color:var(--gold)">✓</span><span style="text-align:center;color:#22C55E">★</span><span style="text-align:center;color:var(--red)">Pts</span></div>
       ${phaseRows||'<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Sin resultados reales aún.</div>'}
     </div>
   </div>`;
@@ -1447,7 +1455,7 @@ function renderPerfil(){
       <input class="inp" type="text" id="prof-team" placeholder="Ej: Paraguay, Olimpia..." value="${u.favoriteTeam||''}" style="margin-bottom:0;">
     </div>
     <button id="prof-save-btn" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--gold),#D4940A);color:#0a0a0a;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;">Guardar cambios</button>
-    <button id="prof-logout-btn" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(213,43,30,.3);background:transparent;color:var(--red);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">↩ Cerrar sesión</button>
+    <button id="prof-logout-btn" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#D52B1E,#A01E14);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(213,43,30,.3);">↩ Cerrar sesión</button>
   </div>`;
 }
 
@@ -1647,9 +1655,16 @@ function exportCSV(){
 function renderFixture(c){
   if(!c) c=document.getElementById('content'); if(!c) return;
   const uid=S.user?.uid, myPreds=uid?(S.preds[uid]||{}):{}, locked=isLocked();
+  checkNextPhase();
   const tabs=Object.keys(PHASES).map(k=>{
     const active=k===curPhase;
-    return `<button onclick="window._setPhase('${k}')" style="padding:7px 14px;border-radius:8px;border:${active?'none':'1px solid rgba(255,255,255,.1)'};background:${active?'rgba(240,180,41,.15)':'transparent'};color:${active?'var(--gold)':'var(--muted)'};font-family:var(--font);font-size:12px;font-weight:${active?700:500};cursor:pointer;white-space:nowrap;">${PHASES[k].tab}</button>`;
+    const blink=S._nextPhase===k&&!active;
+    const baseStyle='padding:7px 14px;border-radius:8px;font-family:var(--font);font-size:12px;cursor:pointer;white-space:nowrap;transition:all .3s;';
+    const activeStyle='background:rgba(245,200,66,.15);color:var(--gold);font-weight:700;border:1px solid var(--gold);box-shadow:0 0 10px rgba(245,200,66,.4);';
+    const blinkStyle='background:rgba(245,200,66,.08);color:var(--gold);font-weight:600;border:1px solid rgba(245,200,66,.5);animation:tabBlink 1.2s ease-in-out infinite;';
+    const inactiveStyle='background:rgba(245,200,66,.05);color:rgba(245,200,66,.65);font-weight:500;border:1px solid rgba(245,200,66,.2);';
+    const style=baseStyle+(active?activeStyle:blink?blinkStyle:inactiveStyle);
+    return `<button onclick="window._setPhase('${k}')" style="${style}">${PHASES[k].tab}</button>`;
   }).join('');
   window._setPhase = (k)=>{ curPhase=k; renderFixture(); };
   const hasAuto=uid&&Object.values(myPreds).some(p=>p&&p.auto);
@@ -1658,7 +1673,7 @@ function renderFixture(c){
     :curPhase==='group'
       ?`<div class="banner open" style="margin-bottom:10px;">✅ Podés modificar tus predicciones hasta el inicio del torneo.</div>
         <button class="btn-azar" id="btn-azar">🎲 ¡Llenar con resultados al azar!</button>
-        ${hasAuto?'<button class="btn-clear" id="btn-clear">🗑️ Borrar resultados al azar</button>':''}`
+        <button class="btn-clear" id="btn-clear" ${!hasAuto?'disabled':''}>🗑️ Borrar resultados al azar</button>`
       :`<div class="banner info" style="margin-bottom:10px;">Si predecís empate, elegí quién gana por penales.</div>`;
   const matches=MATCHES.filter(m=>m.phase===curPhase);
   let matchesHTML='';
@@ -1733,7 +1748,7 @@ function buildCard(m,myPreds,uid,locked){
   }
   const dis=(!uid||locked)?'disabled':'';
   return `<div class="match-card">
-    <div class="match-meta"><span class="match-phase ${m.phase}">${PHASES[m.phase]?.label||m.phase}</span><span class="match-date">${dateStr}</span><span class="match-pts">${phPts}pts</span></div>
+    <div class="match-meta"><span class="match-phase ${m.phase}">${PHASES[m.phase]?.label||m.phase}</span><span class="match-date">${dateStr}</span></div>
     ${teamSels}
     <div class="match-row">
       <div class="team-block">${flag1}<span class="team-name">${t1}</span></div>
@@ -1742,7 +1757,7 @@ function buildCard(m,myPreds,uid,locked){
         <span class="score-sep">:</span>
         <input type="number" class="si ${ic()}" min="0" max="20" value="${ps2}" data-mid="${m.id}" data-f="s2" data-ph="${m.phase}" ${dis} inputmode="numeric">
       </div>
-      <div class="team-block right"><span class="team-name">${t2}</span>${flag2}</div>
+      <div class="team-block right"><span class="team-name">${t2}</span><span style="flex-shrink:0;">${flag2}</span></div>
     </div>
     ${penHTML}${resultHTML}${trophyHTML}
   </div>`;
@@ -1862,6 +1877,23 @@ function autoCascade(uid,mid){
   if(!preds[next.matchId]) preds[next.matchId]={};
   preds[next.matchId][field]=winner;
   S.preds[uid]=preds; fbSavePred(next.matchId,preds[next.matchId]); autoCascade(uid,next.matchId);
+}
+
+function checkNextPhase(){
+  // Detect if current phase is complete and blink next tab
+  const uid=S.user?.uid; if(!uid) return;
+  const preds=S.preds[uid]||{};
+  const phaseOrder=['group','r32','r16','qf','sf','third','final'];
+  for(let i=0;i<phaseOrder.length-1;i++){
+    const ph=phaseOrder[i];
+    const ms=MATCHES.filter(m=>m.phase===ph);
+    const allFilled=ms.every(m=>{ const p=preds[m.id]; return p&&p.s1!=null&&p.s2!=null; });
+    if(allFilled && curPhase===ph){
+      S._nextPhase=phaseOrder[i+1];
+      return;
+    }
+  }
+  S._nextPhase=null;
 }
 
 // ─── RANDOM FILL ──────────────────────────────────────────────────────────────

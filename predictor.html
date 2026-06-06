@@ -216,6 +216,7 @@ body::before{
 .match-row{display:flex;align-items:center;gap:8px;}
 .team-block{flex:1;display:flex;align-items:center;gap:8px;}
 .team-block.right{flex-direction:row-reverse;text-align:right;}
+.team-block.right .team-name{text-align:right;}
 .team-flag{font-size:22px;line-height:1;}
 .team-flag img{width:28px;height:19px;object-fit:cover;border-radius:3px;}
 .team-name{
@@ -328,12 +329,12 @@ body::before{
 /* ── RANDOM BUTTONS ── */
 .btn-azar{
   width:100%;margin-bottom:8px;padding:14px;border-radius:12px;
-  border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);
-  color:rgba(255,255,255,.9);font-family:var(--font);font-weight:600;font-size:14px;
+  border:none;background:linear-gradient(135deg,var(--gold),#D4940A);
+  color:#0a0a0a;font-family:var(--font);font-weight:700;font-size:14px;
   cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
-  transition:all .2s;
+  box-shadow:0 4px 16px rgba(245,200,66,.35);transition:all .2s;
 }
-.btn-azar:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);}
+.btn-azar:hover{filter:brightness(1.08);}
 .btn-clear{
   width:100%;margin-bottom:12px;padding:13px;border-radius:12px;
   border:none;background:linear-gradient(135deg,#D52B1E,#A01E14);
@@ -1173,7 +1174,7 @@ function renderCurrent(){ render(S.curSec); }
 function render(sec){
   const c=document.getElementById('content'); if(!c) return;
   if(sec==='fixture'){ renderFixture(c); return; }
-  if(sec==='inicio')  c.innerHTML=renderInicio();
+  if(sec==='inicio')  { c.innerHTML=renderInicio(); startCountdown(); }
   else if(sec==='tabla')  c.innerHTML=renderTabla();
   else if(sec==='stats')  c.innerHTML=renderStats();
   else if(sec==='reglas') c.innerHTML=renderReglas();
@@ -1229,28 +1230,79 @@ function renderInicio(){
 
   // ── Prize box — same style as Reglas, Paraguay colors ──
   const prizeBox=`<div style="margin-top:16px;background:linear-gradient(135deg,rgba(213,43,30,.12),rgba(0,56,168,.08));border:1px solid rgba(213,43,30,.3);border-radius:var(--radius);padding:20px;text-align:center;">
-    <div style="font-size:32px;margin-bottom:8px;">🎁</div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);margin-bottom:4px;">El Premio</div>
-    <div style="font-size:12px;color:var(--muted);">Se revelará al inicio del Mundial 2026</div>
+    <svg viewBox="0 0 80 80" width="64" height="64" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:8px;">
+      <!-- Box body -->
+      <rect x="8" y="38" width="64" height="36" rx="4" fill="#D52B1E"/>
+      <rect x="8" y="52" width="64" height="22" fill="#fff"/>
+      <rect x="8" y="64" width="64" height="10" rx="4" fill="#0038A8"/>
+      <!-- Lid -->
+      <rect x="4" y="28" width="72" height="14" rx="4" fill="#D52B1E"/>
+      <rect x="4" y="34" width="72" height="8" fill="#fff"/>
+      <rect x="4" y="38" width="72" height="4" fill="#0038A8"/>
+      <!-- Vertical ribbon -->
+      <rect x="34" y="28" width="12" height="46" fill="rgba(255,255,255,.3)"/>
+      <!-- Horizontal ribbon -->
+      <rect x="8" y="48" width="64" height="8" fill="rgba(255,255,255,.25)"/>
+      <!-- Bow left -->
+      <ellipse cx="32" cy="24" rx="12" ry="7" fill="#D52B1E" transform="rotate(-25,32,24)"/>
+      <!-- Bow right -->
+      <ellipse cx="48" cy="24" rx="12" ry="7" fill="#D52B1E" transform="rotate(25,48,24)"/>
+      <!-- Center knot -->
+      <ellipse cx="40" cy="26" rx="7" ry="5" fill="#A01E14"/>
+      <ellipse cx="40" cy="26" rx="4" ry="3" fill="#D52B1E"/>
+      <!-- Bow tails -->
+      <path d="M36 30 Q28 38 22 42" stroke="#D52B1E" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M44 30 Q52 38 58 42" stroke="#D52B1E" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);margin-bottom:4px;">Los Premios</div>
+    <div style="font-size:12px;color:var(--muted);">Se revelarán al inicio del Mundial 2026</div>
   </div>`;
 
+  // Countdown
+  const wcStart = new Date('2026-06-11T19:00:00Z');
+  const now2 = new Date();
+  const diff = wcStart - now2;
+  let countdownHTML = '';
+  if(diff > 0){
+    const days = Math.floor(diff/(1000*60*60*24));
+    const hours = Math.floor((diff%(1000*60*60*24))/(1000*60*60));
+    const mins = Math.floor((diff%(1000*60*60))/(1000*60));
+    const secs = Math.floor((diff%(1000*60))/1000);
+    countdownHTML = `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;">⏱ Tiempo para pronosticar</div>
+      <div style="display:flex;justify-content:center;gap:12px;" id="countdown-display">
+        <div style="text-align:center;"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);line-height:1;">${days}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">días</div></div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:rgba(245,200,66,.3);line-height:1;">:</div>
+        <div style="text-align:center;"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);line-height:1;">${String(hours).padStart(2,'0')}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">horas</div></div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:rgba(245,200,66,.3);line-height:1;">:</div>
+        <div style="text-align:center;"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);line-height:1;">${String(mins).padStart(2,'0')}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">min</div></div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:rgba(245,200,66,.3);line-height:1;">:</div>
+        <div style="text-align:center;"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);line-height:1;" id="cd-secs">${String(secs).padStart(2,'0')}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">seg</div></div>
+      </div>
+    </div>`;
+  }
+
   return `<div style="padding-bottom:8px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;line-height:1;margin-bottom:4px;">Hola, ${S.displayName.split(' ')[0]}</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">${isLocked()?'🔒 El torneo comenzó. Tus predicciones están cerradas.':'✅ El torneo aún no empezó. Podés modificar tus predicciones.'}</div>
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:6px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;line-height:1;">Hola, ${S.displayName.split(' ')[0]}</div>
+      <div style="font-size:12px;color:rgba(245,245,248,.45);font-style:italic;">Predecí los resultados del Mundial FIFA 2026 y escalá en el ranking</div>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">${isLocked()?'🔒 El torneo comenzó. Tus predicciones están cerradas.':'✅ El torneo aún no empezó. Podés modificar tus predicciones.'}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Predicciones</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--gold);">${filled}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:#F5F5F8;">${filled}</div>
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Puntos</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--gold);">${sc.total+trivPts}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:#F5F5F8;">${sc.total}</div>
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Posición</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--gold);">${rank}</div>
       </div>
     </div>
+    ${countdownHTML}
     ${triviaCard}
     ${champion?`<div class="trophy-card">
       <div class="tf-bg" style="background-image:url(https://flagcdn.com/w320/${FLAGS[champion]||'un'}.png)"></div>
@@ -1299,11 +1351,16 @@ function calcScore(uid){
   return {total,hits,exact,pred};
 }
 function calcAllScores(){
+  // Prediction ranking only — trivia is separate
+  const scores={};
+  Object.keys(S.users).forEach(uid=>{ scores[uid]=calcScore(uid).total; });
+  return scores;
+}
+
+function calcTriviaScores(){
   const scores={};
   Object.keys(S.users).forEach(uid=>{
-    const predPts=calcScore(uid).total;
-    const trivPts=S.trivia_pts[uid]?Object.values(S.trivia_pts[uid]).reduce((a,b)=>a+(+b),0):0;
-    scores[uid]=predPts+trivPts;
+    scores[uid]=S.trivia_pts[uid]?Object.values(S.trivia_pts[uid]).reduce((a,b)=>a+(+b),0):0;
   });
   return scores;
 }
@@ -1379,8 +1436,8 @@ function renderReglas(){
 
     <div style="background:linear-gradient(135deg,rgba(213,43,30,.12),rgba(0,56,168,.08));border:1px solid rgba(213,43,30,.3);border-radius:var(--radius);padding:20px;text-align:center;">
       <div style="font-size:32px;margin-bottom:8px;">🎁</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);margin-bottom:4px;">El Premio</div>
-      <div style="font-size:12px;color:var(--muted);">Se revelará al inicio del Mundial 2026</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);margin-bottom:4px;">Los Premios</div>
+      <div style="font-size:12px;color:var(--muted);">Se revelarán al inicio del Mundial 2026</div>
     </div>
   </div>`;
 }
@@ -1583,6 +1640,19 @@ function renderAdmin(){
     </div>
   </div>`;
 }
+// Live countdown ticker
+function startCountdown(){
+  const el = document.getElementById('cd-secs');
+  if(!el) return;
+  clearInterval(window._cdTimer);
+  window._cdTimer = setInterval(()=>{
+    const diff = new Date('2026-06-11T19:00:00Z') - new Date();
+    if(diff <= 0){ clearInterval(window._cdTimer); return; }
+    const secs = Math.floor((diff%(1000*60))/1000);
+    if(el) el.textContent = String(secs).padStart(2,'0');
+  }, 1000);
+}
+
 function bindEvents(sec){
   if(sec==='admin'){
     document.getElementById('btn-export-csv')?.addEventListener('click',exportCSV);
@@ -1757,7 +1827,7 @@ function buildCard(m,myPreds,uid,locked){
         <span class="score-sep">:</span>
         <input type="number" class="si ${ic()}" min="0" max="20" value="${ps2}" data-mid="${m.id}" data-f="s2" data-ph="${m.phase}" ${dis} inputmode="numeric">
       </div>
-      <div class="team-block right"><span class="team-name">${t2}</span><span style="flex-shrink:0;">${flag2}</span></div>
+      <div class="team-block right">${flag2}<span class="team-name">${t2}</span></div>
     </div>
     ${penHTML}${resultHTML}${trophyHTML}
   </div>`;

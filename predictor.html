@@ -1283,11 +1283,10 @@ function renderInicio(){
   }
 
   return `<div style="padding-bottom:8px;">
-    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:6px;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;line-height:1;">Hola, ${S.displayName.split(' ')[0]}</div>
-      <div style="font-size:12px;color:rgba(245,245,248,.45);font-style:italic;">Predecí los resultados del Mundial FIFA 2026 y escalá en el ranking</div>
-    </div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">${isLocked()?'🔒 El torneo comenzó. Tus predicciones están cerradas.':'✅ El torneo aún no empezó. Podés modificar tus predicciones.'}</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:2px;line-height:1;margin-bottom:6px;">Hola, ${S.displayName.split(' ')[0]}</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:var(--gold);margin-bottom:6px;">Predecí · Competí · Ganá</div>
+    <div style="font-size:13px;color:rgba(245,245,248,.75);margin-bottom:4px;">Pronosticá todos los partidos del mundial y jugá con tus colegas.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:20px;">${isLocked()?'🔒 El torneo comenzó. Predicciones cerradas.':'⏳ Cerramos el '+new Date('2026-06-11T19:00:00Z').toLocaleDateString('es',{day:'2-digit',month:'long',year:'numeric',timeZone:'America/New_York'})}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Predicciones</div>
@@ -1358,11 +1357,18 @@ function calcAllScores(){
 }
 
 function calcTriviaScores(){
+  // Trivia ranking only — separate from predictions
   const scores={};
   Object.keys(S.users).forEach(uid=>{
     scores[uid]=S.trivia_pts[uid]?Object.values(S.trivia_pts[uid]).reduce((a,b)=>a+(+b),0):0;
   });
   return scores;
+}
+
+function getTriviaRank(){
+  const scores=calcTriviaScores(); const uid=S.user?.uid;
+  const sorted=Object.keys(scores).sort((a,b)=>scores[b]-scores[a]);
+  const idx=sorted.indexOf(uid); return idx>=0?`#${idx+1}`:'—';
 }
 
 // ─── TABLA ────────────────────────────────────────────────────────────────────
@@ -1486,7 +1492,31 @@ function renderStats(){
       <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:grid;grid-template-columns:1fr 40px 40px 40px;gap:12px;"><span style="color:var(--muted)">Fase</span><span style="text-align:center;color:var(--gold)">✓</span><span style="text-align:center;color:#22C55E">★</span><span style="text-align:center;color:var(--red)">Pts</span></div>
       ${phaseRows||'<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Sin resultados reales aún.</div>'}
     </div>
+    ${renderTriviaStats()}
   </div>`;
+}
+
+function renderTriviaStats(){
+  const uid=S.user?.uid; if(!uid) return '';
+  const myTrivia=S.trivia[uid]||{};
+  const myTrivPts=S.trivia_pts[uid]||{};
+  const answered=Object.keys(myTrivia).length;
+  const correct=Object.keys(myTrivPts).length;
+  const trivRank=getTriviaRank();
+  const cards=[
+    ['Posición Trivia',trivRank,'#3B8BFF'],
+    ['Pts Trivia',(correct*2)+'','var(--gold)'],
+    ['Respondidas',answered+'','#F5F5F8'],
+    ['Correctas',correct+'','#22C55E'],
+  ];
+  return '<div style="margin-top:20px;">'
+    +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text);margin-bottom:14px;">🧠 Mis Stats de Trivia</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    +cards.map(([l,v,c])=>'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">'
+      +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">'+l+'</div>'
+      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:'+c+';">'+v+'</div>'
+      +'</div>').join('')
+    +'</div></div>';
 }
 
 // ─── PERFIL ───────────────────────────────────────────────────────────────────

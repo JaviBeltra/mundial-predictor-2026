@@ -762,8 +762,69 @@ Object.keys(BRACKET).forEach(nextId => {
   BRACKET[nextId].forEach((feedId,idx) => { FEEDS_INTO[feedId]={matchId:nextId,pos:idx+1}; });
 });
 
+
+// ─── TRIVIA ───────────────────────────────────────────────────────────────────
+const TRIVIA_PTS = 2;
+const TRIVIA_QUESTIONS = [
+  {day:1,topic:'Paraguay',q:'¿Cuántas veces clasificó Paraguay a la Copa del Mundo FIFA?',opts:['7 veces','8 veces','9 veces','10 veces'],ans:1,exp:'Paraguay ha clasificado 8 veces al Mundial: 1930, 1950, 1958, 1986, 1998, 2002, 2006 y 2010.'},
+  {day:2,topic:'Historia',q:'¿En qué año se jugó el primer Mundial de fútbol?',opts:['1926','1928','1930','1934'],ans:2,exp:'El primer Mundial se jugó en Uruguay en 1930. La selección local fue campeona.'},
+  {day:3,topic:'Paraguay',q:'¿Cuál es el mejor resultado de Paraguay en un Mundial?',opts:['Campeón','Subcampeón','Cuartos de final','Octavos de final'],ans:2,exp:'Paraguay llegó a cuartos de final en los Mundiales de 1954, 2002 y 2010.'},
+  {day:4,topic:'2026',q:'¿Cuántos países organizan el Mundial 2026?',opts:['1','2','3','4'],ans:2,exp:'El Mundial 2026 es organizado por tres países: Estados Unidos, Canadá y México.'},
+  {day:5,topic:'Historia',q:'¿Qué selección ha ganado más Mundiales en la historia?',opts:['Alemania','Argentina','Brasil','Italia'],ans:2,exp:'Brasil es el país con más títulos mundiales: 1958, 1962, 1970, 1994 y 2002 (5 títulos).'},
+  {day:6,topic:'Paraguay',q:'¿En qué Mundial llegó Paraguay a cuartos de final por última vez?',opts:['2002','2006','2010','2014'],ans:2,exp:'Paraguay llegó a cuartos de final en el Mundial 2010 de Sudáfrica, cayendo ante España 1-0.'},
+  {day:7,topic:'2026',q:'¿Cuántos equipos participan en el Mundial 2026?',opts:['32','40','48','64'],ans:2,exp:'El Mundial 2026 amplía el formato a 48 selecciones, el mayor número en la historia del torneo.'},
+  {day:8,topic:'Historia',q:'¿Quién es el máximo goleador en la historia de los Mundiales?',opts:['Pelé','Miroslav Klose','Ronaldo Nazário','Gerd Müller'],ans:1,exp:'Miroslav Klose de Alemania es el máximo goleador histórico con 16 goles en 4 Mundiales.'},
+  {day:9,topic:'Paraguay',q:'¿Cómo se llama el estadio principal de la selección paraguaya?',opts:['Estadio Defensores del Chaco','Estadio Pueblo Nuevo','Estadio Rogelio Livieres','Estadio General Díaz'],ans:0,exp:'El Estadio Defensores del Chaco en Asunción es la casa de la selección paraguaya desde 1980.'},
+  {day:10,topic:'2026',q:'¿En qué estadio se jugará la Final del Mundial 2026?',opts:['Estadio Azteca','Rose Bowl','MetLife Stadium','SoFi Stadium'],ans:2,exp:'La Final del Mundial 2026 se disputará en el MetLife Stadium de Nueva Jersey, Estados Unidos.'},
+  {day:11,topic:'Historia',q:'¿Cuál fue el partido con más goles en la historia del Mundial?',opts:['Austria 7-5 Suiza (1954)','Brasil 7-1 Alemania (2014)','Hungría 10-1 El Salvador (1982)','Yugoslavia 9-0 Zaire (1974)'],ans:0,exp:'Austria 7-5 Suiza en 1954 (12 goles) es el partido con más goles en la historia del Mundial.'},
+  {day:12,topic:'Paraguay',q:'¿Cuál es el apodo oficial de la selección paraguaya de fútbol?',opts:['Los Guaraníes','La Albirroja','Los Rojos','La Roja'],ans:1,exp:'La selección paraguaya es conocida como "La Albirroja" por los colores blanco y rojo de su camiseta.'},
+  {day:13,topic:'2026',q:'¿Cuántas ciudades sede tendrá el Mundial 2026?',opts:['12','14','16','18'],ans:2,exp:'El Mundial 2026 se disputará en 16 ciudades sede: 11 en EE.UU., 3 en México y 2 en Canadá.'},
+  {day:14,topic:'Historia',q:'¿Cuál es el único país que ha participado en todos los Mundiales sin excepción?',opts:['Italia','Alemania','Argentina','Brasil'],ans:3,exp:'Brasil es el único país que ha participado en todas las ediciones del Mundial desde 1930.'},
+  {day:15,topic:'Paraguay',q:'¿En qué Mundial debutó Paraguay por primera vez?',opts:['1930','1950','1958','1986'],ans:0,exp:'Paraguay debutó en el Mundial 1930 en Uruguay, siendo uno de los 13 equipos participantes del primer torneo.'},
+  {day:16,topic:'2026',q:'¿Qué nueva fase tiene el Mundial 2026 que no existía antes?',opts:['Fase Play-offs','Round of 32 (16vos de final)','Grupos dobles','Repechaje mundial'],ans:1,exp:'El Mundial 2026 introduce el Round of 32 — 16vos de final — una ronda completamente nueva en la historia.'},
+  {day:17,topic:'Historia',q:'¿Cuántos goles marcó Just Fontaine en el Mundial 1958, récord histórico?',opts:['10 goles','11 goles','13 goles','15 goles'],ans:2,exp:'Just Fontaine de Francia marcó 13 goles en el Mundial 1958 de Suecia, récord que sigue en pie hoy.'},
+  {day:18,topic:'Paraguay',q:'¿Qué jugador paraguayo fue el goleador histórico de la selección por muchos años?',opts:['Roque Santa Cruz','José Cardozo','Salvador Cabañas','Nelson Valdez'],ans:1,exp:'José Cardozo fue el histórico goleador de la Albirroja con 25 goles, récord superado luego por Roque Santa Cruz.'},
+  {day:19,topic:'2026',q:'¿Cuántos partidos en total se disputarán en el Mundial 2026?',opts:['88','96','104','112'],ans:2,exp:'El Mundial 2026 contará con 104 partidos en total, frente a los 64 del formato anterior de 32 equipos.'},
+  {day:20,topic:'Historia',q:'¿Qué selección ganó el último Mundial antes del 2026?',opts:['Francia','Brasil','Argentina','España'],ans:2,exp:'Argentina ganó el Mundial 2022 en Qatar, su tercer título mundial, con Lionel Messi como figura.'},
+];
+
+function getTodayTrivia(){
+  const start = new Date('2026-06-11T19:00:00Z');
+  const now = new Date();
+  const dayNum = Math.max(1, Math.floor((now - start) / (1000*60*60*24)) + 1);
+  if(dayNum > TRIVIA_QUESTIONS.length) return TRIVIA_QUESTIONS[TRIVIA_QUESTIONS.length-1];
+  return TRIVIA_QUESTIONS.find(q=>q.day===dayNum) || TRIVIA_QUESTIONS[0];
+}
+function getTriviaKey(day){ return `day_${day}`; }
+
+async function answerTrivia(day, ansIdx){
+  if(!S.user) return;
+  const uid = S.user.uid;
+  const key = getTriviaKey(day);
+  if(!S.trivia[uid]) S.trivia[uid]={};
+  S.trivia[uid][key] = {answer:ansIdx};
+  await set(ref(db,`predictor/trivia/${uid}/${key}`),{answer:ansIdx,ts:Date.now()});
+  const q = TRIVIA_QUESTIONS.find(tq=>tq.day===day);
+  if(q && ansIdx===q.ans){
+    if(!S.trivia_pts[uid]) S.trivia_pts[uid]={};
+    S.trivia_pts[uid][key] = TRIVIA_PTS;
+    await set(ref(db,`predictor/trivia_pts/${uid}/${key}`),TRIVIA_PTS);
+  }
+  renderCurrent();
+}
+
+function getMyTriviaAnswer(day){
+  const uid=S.user?.uid; if(!uid) return null;
+  return S.trivia[uid]?.[getTriviaKey(day)]?.answer ?? null;
+}
+function getMyTriviaPoints(){
+  const uid=S.user?.uid; if(!uid) return 0;
+  const pts=S.trivia_pts[uid]; if(!pts) return 0;
+  return Object.values(pts).reduce((a,b)=>a+(+b),0);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 // ─── STATE ────────────────────────────────────────────────────────────────────
-let S = { user:null, displayName:'', isAdmin:false, preds:{}, results:{}, users:{}, curSec:'inicio' };
+let S = { user:null, displayName:'', isAdmin:false, preds:{}, results:{}, users:{}, trivia:{}, trivia_pts:{}, curSec:'inicio' };
 let curPhase = 'group';
 function isLocked(){ return new Date() >= WC_START; }
 
@@ -961,18 +1022,22 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function loadData(){
-  const [predsSnap,resSnap,usersSnap,adminSnap,lockSnap] = await Promise.all([
+  const [predsSnap,resSnap,usersSnap,adminSnap,lockSnap,triviaSnap,triviaPtsSnap] = await Promise.all([
     get(ref(db,'predictor/preds')),
     get(ref(db,'predictor/results')),
     get(ref(db,'predictor/users')),
     get(ref(db,`predictor/admins/${S.user.uid}`)),
     get(ref(db,'predictor/config/locked')),
+    get(ref(db,'predictor/trivia')),
+    get(ref(db,'predictor/trivia_pts')),
   ]);
-  S.preds   = predsSnap.exists()  ? predsSnap.val()  : {};
-  S.results = resSnap.exists()    ? resSnap.val()    : {};
-  S.users   = usersSnap.exists()  ? usersSnap.val()  : {};
-  S.isAdmin = adminSnap.exists();
-  S.locked  = lockSnap.exists()   ? lockSnap.val()   : false;
+  S.preds      = predsSnap.exists()    ? predsSnap.val()    : {};
+  S.results    = resSnap.exists()      ? resSnap.val()      : {};
+  S.users      = usersSnap.exists()    ? usersSnap.val()    : {};
+  S.isAdmin    = adminSnap.exists();
+  S.locked     = lockSnap.exists()     ? lockSnap.val()     : false;
+  S.trivia     = triviaSnap.exists()   ? triviaSnap.val()   : {};
+  S.trivia_pts = triviaPtsSnap.exists()? triviaPtsSnap.val(): {};
   // Live listeners — guard against duplicate registration
   if(!S._listenersRegistered){
     S._listenersRegistered = true;
@@ -981,6 +1046,9 @@ async function loadData(){
     onValue(ref(db,'predictor/config/locked'),s=>{ S.locked=s.exists()?s.val():false; renderCurrent(); });
   }
 }
+
+// Expose answerTrivia globally for inline onclick in trivia card
+window.answerTrivia = answerTrivia;
 
 // ─── AUTO SYNC SCHEDULER ─────────────────────────────────────────────────────
 const syncTimers = {}; // matchId → timer reference
@@ -1143,7 +1211,7 @@ function renderInicio(){
     <!-- PRIZE BOX — Paraguay gift wrap -->
     <div style="margin-top:16px;position:relative;border-radius:16px;overflow:hidden;text-align:center;">
       <!-- Gift box SVG with Paraguay colors -->
-      <svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+      <svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" style="width:60%;max-width:220px;display:block;margin:0 auto;">
         <!-- Box body: white background with red/blue/white stripes (Paraguay flag pattern) -->
         <rect x="20" y="80" width="280" height="110" rx="6" fill="#fff"/>
         <!-- Horizontal stripes on box body -->
@@ -1224,7 +1292,11 @@ function calcScore(uid){
 }
 function calcAllScores(){
   const scores={};
-  Object.keys(S.users).forEach(uid=>{scores[uid]=calcScore(uid).total;});
+  Object.keys(S.users).forEach(uid=>{
+    const predPts=calcScore(uid).total;
+    const trivPts=S.trivia_pts[uid]?Object.values(S.trivia_pts[uid]).reduce((a,b)=>a+(+b),0):0;
+    scores[uid]=predPts+trivPts;
+  });
   return scores;
 }
 
@@ -1342,7 +1414,7 @@ function renderStats(){
   return `<div style="padding-bottom:24px;">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:var(--text);margin-bottom:20px;">Mis Estadísticas</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-      ${[['Posición',rank,'var(--red)'],['Puntos',sc.total,'var(--text)'],['Aciertos',sc.hits,'var(--red)'],['Exactos ⭐',sc.exact,'var(--gold)'],['Predicciones',sc.pred,'var(--text)'],['% acierto',sc.pred>0?Math.round(sc.hits/sc.pred*100)+'%':'—','var(--red)']].map(([l,v,c])=>`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${l}</div><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${c};">${v}</div></div>`).join('')}
+      ${[['Posición',rank,'var(--gold)'],['Puntos',sc.total,'var(--text)'],['Aciertos',sc.hits,'var(--text)'],['Exactos ⭐',sc.exact,'var(--gold)'],['Predicciones',sc.pred,'var(--text)'],['% acierto',sc.pred>0?Math.round(sc.hits/sc.pred*100)+'%':'—','var(--text)']].map(([l,v,c])=>`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${l}</div><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${c};">${v}</div></div>`).join('')}
     </div>
     ${myIdx>0?`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:11px;color:var(--muted);">Para superar a</div><div style="font-size:14px;font-weight:600;">${above}</div></div><div style="text-align:right;"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red);">+${diff}</div><div style="font-size:10px;color:var(--muted);">puntos necesarios</div></div></div>`:'<div class="banner open" style="margin-bottom:16px;">🥇 Sos el líder de la tabla.</div>'}
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
@@ -1357,7 +1429,7 @@ function renderPerfil(){
   const uid=S.user?.uid; if(!uid) return '<div class="banner info">Iniciá sesión.</div>';
   const u=S.users[uid]||{};
   const photoURL=u.photoURL||S.user.photoURL||null;
-  const av=photoURL?`<img src="${photoURL}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--red);" onerror="this.style.display='none'">`
+  const av=photoURL?`<img src="${photoURL}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);" onerror="this.style.display='none'">`
     :`<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--red),#A01E14);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:36px;color:#fff;">${(S.displayName[0]||'?').toUpperCase()}</div>`;
   return `<div style="padding-bottom:24px;">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:var(--text);margin-bottom:20px;">Mi Perfil</div>
@@ -1374,7 +1446,7 @@ function renderPerfil(){
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">🏳️ Mi equipo favorito</div>
       <input class="inp" type="text" id="prof-team" placeholder="Ej: Paraguay, Olimpia..." value="${u.favoriteTeam||''}" style="margin-bottom:0;">
     </div>
-    <button id="prof-save-btn" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--red),#A01E14);color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;">Guardar cambios</button>
+    <button id="prof-save-btn" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--gold),#D4940A);color:#0a0a0a;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;">Guardar cambios</button>
     <button id="prof-logout-btn" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(213,43,30,.3);background:transparent;color:var(--red);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">↩ Cerrar sesión</button>
   </div>`;
 }
@@ -1550,7 +1622,7 @@ function bindEvents(sec){
           const dataUrl=canvas.toDataURL('image/jpeg',0.7);
           S.users[uid].photoURL=dataUrl;
           set(ref(db,`predictor/users/${uid}/photoURL`),dataUrl);
-          document.getElementById('prof-av-wrap').innerHTML=`<img src="${dataUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--red);">`;
+          document.getElementById('prof-av-wrap').innerHTML=`<img src="${dataUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);">`;
           // Update header avatar too
           const headerAv=document.getElementById('user-avatar');
           if(headerAv) headerAv.innerHTML=`<img src="${dataUrl}" alt="avatar"/>`;

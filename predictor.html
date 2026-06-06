@@ -786,28 +786,35 @@ function showLogin(){ document.getElementById('loading').style.display='none'; d
 function showLoading(){ document.getElementById('loading').style.display='flex'; document.getElementById('login-screen').style.display='none'; }
 
 // ── Google Sign-In ──
-// Detect Safari/WebKit to choose popup vs redirect
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
+// signInWithPopup works in Safari when triggered by direct user gesture (click)
+// signInWithRedirect fails in Safari due to ITP cookie blocking on github.io
 document.getElementById('btn-google').addEventListener('click', async () => {
   clearErr();
-  if(isSafari){
-    // Safari blocks popups → use redirect directly
-    try { await signInWithRedirect(auth, gProv); }
-    catch(e){ showErr('No se pudo iniciar sesión con Google.'); }
-  } else {
-    // Chrome, Firefox, Android → use popup
-    try {
-      await signInWithPopup(auth, gProv);
-    } catch(e) {
-      if(e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request'){
-        // Popup blocked → fallback to redirect
-        try { await signInWithRedirect(auth, gProv); }
-        catch(e2){ showErr('No se pudo iniciar sesión con Google.'); }
-      } else if(e.code !== 'auth/popup-closed-by-user'){
-        showErr('Error al iniciar sesión con Google. Código: ' + (e.code||'desconocido'));
-      }
+  const btn = document.getElementById('btn-google');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="opacity:.6">Abriendo Google...</span>';
+  try {
+    await signInWithPopup(auth, gProv);
+    // onAuthStateChanged handles the rest
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continuar con Google`;
+    if(e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request'){
+      // User closed popup — no error needed
+    } else if(e.code === 'auth/popup-blocked'){
+      showErr('El popup fue bloqueado. Permití popups para este sitio e intentá de nuevo.');
+    } else {
+      showErr('Error con Google: ' + (e.code || e.message));
     }
+  }
+});
+
+// Handle redirect result (kept as safety net)
+getRedirectResult(auth).then(result => {
+  // handled by onAuthStateChanged
+}).catch(e => {
+  if(e.code && e.code !== 'auth/no-current-user' && e.code !== 'auth/null-user'){
+    console.warn('Redirect result error:', e.code);
   }
 });
 
@@ -1133,22 +1140,51 @@ function renderInicio(){
       <div class="tf-sub">Campeón del Mundo</div>
     </div>`:`<div class="banner info">🏆 Completá el partido de la Final para ver tu campeón aquí.</div>`}
 
-    <!-- PRIZE BOX -->
-    <div style="margin-top:16px;position:relative;border-radius:20px;overflow:hidden;padding:28px 24px;text-align:center;background:#0d0d14;border:1px solid rgba(255,255,255,.1);">
-      <!-- Paraguay ribbon wrapping effect: diagonal color strips -->
-      <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;">
-        <div style="position:absolute;top:-30px;left:-30px;width:80px;height:200%;background:linear-gradient(135deg,#D52B1E 0%,rgba(213,43,30,.6) 50%,transparent 70%);opacity:.25;transform:rotate(-15deg);"></div>
-        <div style="position:absolute;top:-30px;right:-30px;width:80px;height:200%;background:linear-gradient(225deg,#0038A8 0%,rgba(0,56,168,.6) 50%,transparent 70%);opacity:.25;transform:rotate(15deg);"></div>
+    <!-- PRIZE BOX — Paraguay gift wrap -->
+    <div style="margin-top:16px;position:relative;border-radius:16px;overflow:hidden;text-align:center;">
+      <!-- Gift box SVG with Paraguay colors -->
+      <svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+        <!-- Box body: white background with red/blue/white stripes (Paraguay flag pattern) -->
+        <rect x="20" y="80" width="280" height="110" rx="6" fill="#fff"/>
+        <!-- Horizontal stripes on box body -->
+        <rect x="20" y="80" width="280" height="37" rx="0" fill="#D52B1E"/>
+        <rect x="20" y="117" width="280" height="36" fill="#fff"/>
+        <rect x="20" y="153" width="280" height="37" rx="0" fill="#0038A8"/>
+        <!-- Round corners mask bottom -->
+        <rect x="20" y="175" width="280" height="15" rx="6" fill="#0038A8"/>
+        <!-- Box lid: white with stripes -->
+        <rect x="10" y="58" width="300" height="30" rx="6" fill="#fff"/>
+        <rect x="10" y="58" width="300" height="10" rx="6" fill="#D52B1E"/>
+        <rect x="10" y="68" width="300" height="10" fill="#fff"/>
+        <rect x="10" y="78" width="300" height="10" rx="0" fill="#0038A8"/>
+        <!-- Vertical ribbon on box body (white stripe down center) -->
+        <rect x="145" y="80" width="30" height="110" fill="rgba(255,255,255,.35)"/>
+        <!-- Vertical ribbon on lid -->
+        <rect x="145" y="58" width="30" height="30" fill="rgba(255,255,255,.35)"/>
+        <!-- Horizontal ribbon band -->
+        <rect x="20" y="107" width="280" height="18" fill="rgba(255,255,255,.25)"/>
+        <!-- BOW — centered on top of lid -->
+        <!-- Left loop -->
+        <ellipse cx="138" cy="45" rx="28" ry="14" fill="#D52B1E" transform="rotate(-20,138,45)"/>
+        <ellipse cx="138" cy="45" rx="20" ry="9" fill="#B01818" transform="rotate(-20,138,45)"/>
+        <!-- Right loop -->
+        <ellipse cx="182" cy="45" rx="28" ry="14" fill="#D52B1E" transform="rotate(20,182,45)"/>
+        <ellipse cx="182" cy="45" rx="20" ry="9" fill="#B01818" transform="rotate(20,182,45)"/>
+        <!-- Left tail -->
+        <path d="M155 58 Q130 75 118 85" stroke="#D52B1E" stroke-width="8" fill="none" stroke-linecap="round"/>
+        <!-- Right tail -->
+        <path d="M165 58 Q190 75 202 85" stroke="#D52B1E" stroke-width="8" fill="none" stroke-linecap="round"/>
+        <!-- Center knot -->
+        <ellipse cx="160" cy="52" rx="14" ry="10" fill="#D52B1E"/>
+        <ellipse cx="160" cy="52" rx="8" ry="6" fill="#FF4040"/>
+        <!-- White highlight on bow -->
+        <ellipse cx="155" cy="48" rx="4" ry="3" fill="rgba(255,255,255,.3)" transform="rotate(-10,155,48)"/>
+      </svg>
+      <!-- Text overlay -->
+      <div style="background:linear-gradient(180deg,rgba(9,9,15,0) 0%,rgba(9,9,15,.95) 40%,#09090F 100%);margin-top:-60px;padding:20px 20px 24px;position:relative;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:#fff;margin-bottom:6px;">El Premio</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.6;">Se revelará al inicio del<br>Mundial 2026 — 11 de junio</div>
       </div>
-      <!-- Bow on top -->
-      <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:2px;align-items:center;">
-        <div style="width:18px;height:12px;border-radius:50% 50% 0 0;background:rgba(213,43,30,.7);transform:rotate(-20deg);"></div>
-        <div style="width:8px;height:8px;border-radius:50%;background:rgba(213,43,30,.9);"></div>
-        <div style="width:18px;height:12px;border-radius:50% 50% 0 0;background:rgba(213,43,30,.7);transform:rotate(20deg);"></div>
-      </div>
-      <div style="font-size:52px;margin-bottom:10px;margin-top:8px;filter:drop-shadow(0 4px 16px rgba(213,43,30,.3));">🎁</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:#fff;margin-bottom:6px;">El Premio</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.45);line-height:1.6;">Se revelará al inicio del<br>Mundial 2026 — 11 de junio</div>
     </div>
   </div>`;
 }
@@ -1235,20 +1271,20 @@ function renderReglas(){
     <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Mundial Predictor 2026 — Paraguay</div>
 
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
-      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 100px 100px;gap:8px;">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Fase</div>
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;text-align:center;">Resultado</div>
+      <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.1);display:grid;grid-template-columns:1fr 100px 100px;gap:8px;">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1px;">Fase</div>
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1px;text-align:center;">Resultado</div>
         <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;">Exacto ⭐</div>
       </div>
-      ${phases.map(p=>`<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);display:grid;grid-template-columns:1fr 100px 100px;gap:8px;align-items:center;">
-        <div style="font-size:13px;font-weight:500;color:var(--text);">${p.fase}</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--red);text-align:center;">${p.correcto}</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);text-align:center;">${p.exacto}</div>
+      ${phases.map(p=>`<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:grid;grid-template-columns:1fr 100px 100px;gap:8px;align-items:center;">
+        <div style="font-size:13px;font-weight:600;color:#F5F5F8;">${p.fase}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#F5F5F8;text-align:center;">${p.correcto}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);text-align:center;">${p.exacto}</div>
       </div>`).join('')}
     </div>
 
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;">
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;">📋 Cómo funciona</div>
+      <div style="font-size:13px;font-weight:700;color:#F5F5F8;margin-bottom:12px;letter-spacing:.3px;">📋 Cómo funciona</div>
       ${[
         ['🎯','Predecí el marcador exacto de cada partido antes del inicio del Mundial.'],
         ['✅','Si acertás el resultado (ganador o empate) pero no el marcador, ganás los puntos base de esa fase.'],
@@ -1258,7 +1294,7 @@ function renderReglas(){
         ['🎲','El botón "Llenar con resultados al azar" completa automáticamente todos los partidos que dejaste vacíos, usando el ranking FIFA para determinar probabilidades. Respeta siempre los resultados que ya cargaste manualmente.'],
         ['✏️','Podés editar cualquier predicción cuando quieras, antes del inicio del torneo. El botón al azar no sobreescribe lo que ya completaste.'],
         ['🗑️','El botón rojo "Borrar resultados al azar" elimina únicamente las predicciones generadas automáticamente. Tus predicciones manuales nunca se eliminan.'],
-      ].map(([icon,text])=>`<div style="display:flex;gap:10px;margin-bottom:8px;font-size:12px;color:var(--muted);line-height:1.5;"><span style="flex-shrink:0;">${icon}</span><span>${text}</span></div>`).join('')}
+      ].map(([icon,text])=>`<div style="display:flex;gap:10px;margin-bottom:10px;font-size:12px;color:rgba(245,245,248,.75);line-height:1.6;"><span style="flex-shrink:0;">${icon}</span><span>${text}</span></div>`).join('')}
     </div>
 
     <div style="background:linear-gradient(135deg,rgba(213,43,30,.12),rgba(0,56,168,.08));border:1px solid rgba(213,43,30,.3);border-radius:var(--radius);padding:20px;text-align:center;">

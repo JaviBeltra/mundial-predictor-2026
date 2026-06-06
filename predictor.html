@@ -921,10 +921,13 @@ async function loadData(){
   S.users   = usersSnap.exists()  ? usersSnap.val()  : {};
   S.isAdmin = adminSnap.exists();
   S.locked  = lockSnap.exists()   ? lockSnap.val()   : false;
-  // Live listeners
-  onValue(ref(db,'predictor/preds'),    s=>{ S.preds  =s.exists()?s.val():{};  renderCurrent(); });
-  onValue(ref(db,'predictor/results'),  s=>{ S.results=s.exists()?s.val():{};  renderCurrent(); });
-  onValue(ref(db,'predictor/config/locked'),s=>{ S.locked=s.exists()?s.val():false; renderCurrent(); });
+  // Live listeners — guard against duplicate registration
+  if(!S._listenersRegistered){
+    S._listenersRegistered = true;
+    onValue(ref(db,'predictor/preds'),    s=>{ S.preds  =s.exists()?s.val():{};  renderCurrent(); });
+    onValue(ref(db,'predictor/results'),  s=>{ S.results=s.exists()?s.val():{};  renderCurrent(); });
+    onValue(ref(db,'predictor/config/locked'),s=>{ S.locked=s.exists()?s.val():false; renderCurrent(); });
+  }
 }
 
 // ─── AUTO SYNC SCHEDULER ─────────────────────────────────────────────────────
@@ -1030,8 +1033,8 @@ function showApp(){
   document.addEventListener('click',()=>document.getElementById('user-menu').classList.remove('on'));
   document.getElementById('menu-logout').onclick=()=>signOut(auth);
   navTo('inicio');
-  // Start auto-sync scheduler for all matches
-  scheduleAllMatches();
+  // Start auto-sync scheduler (only once per session)
+  if(!S._schedulerStarted){ S._schedulerStarted=true; scheduleAllMatches(); }
 }
 
 function navTo(sec){ S.curSec=sec; document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.sec===sec)); renderCurrent(); }
@@ -1220,115 +1223,6 @@ function renderReglas(){
 // ─── STATS ────────────────────────────────────────────────────────────────────
 function renderStats(){
   const uid=S.user?.uid; if(!uid) return '<div class="banner info">Iniciá sesión para ver tus estadísticas.</div>';
-  const preds=S.preds[uid]||{};
-  const sc=calcScore(uid);
-  const rank=getMyRank();
-  // Per-phase breakdown
-  const phases=['group','r32','r16','qf','sf','third','final'];
-  const phaseStats={};
-  phases.forEach(ph=>{
-    const ms=MATCHES.filter(m=>m.phase===ph);
-    let hits=0,exact=0,pred=0,pts=0;
-    ms.forEach(m=>{
-      const p=preds[m.id],r=S.results[m.id];
-      if(p&&p.s1!=null) pred++;
-      if(!r||r.s1==null) return;
-      const mp=calcMS(p,r,ph);
-      if(mp>0){hits++;pts+=mp;if(mp===PHASES[ph].pts*2)exact++;}
-    });
-    phaseStats[ph]={hits,exact,pred,pts,total:ms.length};
-  });
-
-  const phaseRows=phases.map(ph=>{
-    const s=phaseStats[ph]; if(s.pred===0) return '';
-    const pct=s.pred>0?Math.round(s.hits/Math.max(s.pred,1)*100):0;
-    const bar=s.hits>0?`<div style="height:4px;border-radius:2px;background:rgba(255,255,255,.08);margin-top:6px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:var(--red);border-radius:2px;transition:width .5s;"></div></div>`:'';
-    return `<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;gap:12px;">
-      <div style="flex:1;"><div style="font-size:13px;font-weight:500;color:var(--text);">${PHASES[ph].label}</div>${bar}</div>
-      <div style="text-align:center;min-width:40px;"><div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red);">${s.hits}</div><div style="font-size:9px;color:var(--muted);">aciertos</div></div>
-      <div style="text-align:center;min-width:40px;"><div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);">${s.exact}</div><div style="font-size:9px;color:var(--muted);">exactos</div></div>
-      <div style="text-align:center;min-width:40px;"><div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text);">${s.pts}</div><div style="font-size:9px;color:var(--muted);">puntos</div></div>
-    </div>`;
-  }).join('');
-
-  const allScores=calcAllScores();
-  const sorted=Object.keys(allScores).sort((a,b)=>allScores[b]-allScores[a]);
-  const myIdx=sorted.indexOf(uid);
-  const above=myIdx>0?S.users[sorted[myIdx-1]]?.name||'—':'—';
-  const myPts=allScores[uid]||0;
-  const abovePts=myIdx>0?allScores[sorted[myIdx-1]]||0:myPts;
-  const diff=abovePts-myPts;
-
-  return `<div style="padding-bottom:24px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:var(--text);margin-bottom:20px;">Mis Estadísticas</div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-      ${[
-        ['Posición',rank,'var(--red)'],
-        ['Puntos totales',sc.total,'var(--text)'],
-        ['Aciertos',sc.hits,'var(--red)'],
-        ['Exactos ⭐',sc.exact,'var(--gold)'],
-        ['Predicciones',sc.pred,'var(--text)'],
-        ['% acierto',sc.pred>0?Math.round(sc.hits/sc.pred*100)+'%':'—','var(--red)'],
-      ].map(([label,val,color])=>`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${label}</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${color};">${val}</div>
-      </div>`).join('')}
-    </div>
-
-    ${myIdx>0?`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
-      <div><div style="font-size:11px;color:var(--muted);">Para superar a</div><div style="font-size:14px;font-weight:600;">${above}</div></div>
-      <div style="text-align:right;"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red);">+${diff}</div><div style="font-size:10px;color:var(--muted);">puntos necesarios</div></div>
-    </div>`:'<div class="banner open" style="margin-bottom:16px;">🥇 Sos el líder de la tabla actualmente.</div>'}
-
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
-      <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:grid;grid-template-columns:1fr 40px 40px 40px;gap:12px;"><span>Fase</span><span style="text-align:center">✓</span><span style="text-align:center">★</span><span style="text-align:center">Pts</span></div>
-      ${phaseRows||'<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Aún no hay resultados reales disponibles.</div>'}
-    </div>
-  </div>`;
-}
-
-// ─── PERFIL ───────────────────────────────────────────────────────────────────
-function renderPerfil(){
-  const uid=S.user?.uid; if(!uid) return '<div class="banner info">Iniciá sesión.</div>';
-  const u=S.users[uid]||{};
-  const photoURL=u.photoURL||S.user.photoURL||null;
-  const av=photoURL?`<img src="${photoURL}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--red);" onerror="this.style.display='none'">`
-    :`<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--red),#A01E14);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:36px;color:#fff;">${(S.displayName[0]||'?').toUpperCase()}</div>`;
-
-  return `<div style="padding-bottom:24px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:var(--text);margin-bottom:20px;">Mi Perfil</div>
-
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;display:flex;flex-direction:column;align-items:center;gap:12px;">
-      <div id="prof-av-wrap">${av}</div>
-      ${!S.user.photoURL?`<div>
-        <input type="file" id="prof-photo-inp" accept="image/*" style="display:none;">
-        <button onclick="document.getElementById('prof-photo-inp').click()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">📷 Cambiar foto</button>
-      </div>`:'<div style="font-size:11px;color:var(--muted);">Foto de cuenta Google</div>'}
-      <div style="text-align:center;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;">${S.displayName}</div>
-        <div style="font-size:12px;color:var(--muted);">${S.user.email||''}</div>
-      </div>
-    </div>
-
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;">⚽ Mi jugador favorito</div>
-      <input class="inp" type="text" id="prof-player" placeholder="Ej: Julio Enciso, Almirón..." value="${u.favoritePlayer||''}" style="margin-bottom:0;">
-    </div>
-
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;">🏳️ Mi equipo favorito</div>
-      <input class="inp" type="text" id="prof-team" placeholder="Ej: Paraguay, Olimpia..." value="${u.favoriteTeam||''}" style="margin-bottom:0;">
-    </div>
-
-    <button id="prof-save-btn" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--red),#A01E14);color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;">Guardar cambios</button>
-    <button onclick="if(confirm('¿Cerrar sesión?')) signOutUser()" style="width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1px solid rgba(213,43,30,.3);background:transparent;color:var(--red);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">↩ Cerrar sesión</button>
-  </div>`;
-}
-
-// ─── STATS ────────────────────────────────────────────────────────────────────
-function renderStats(){
-  const uid=S.user?.uid; if(!uid) return '<div class="banner info">Iniciá sesión para ver tus estadísticas.</div>';
   const sc=calcScore(uid);
   const rank=getMyRank();
   const allScores=calcAllScores();
@@ -1384,7 +1278,7 @@ function renderPerfil(){
     <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:var(--text);margin-bottom:20px;">Mi Perfil</div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;display:flex;flex-direction:column;align-items:center;gap:12px;">
       <div id="prof-av-wrap">${av}</div>
-      ${!S.user.photoURL?`<div><input type="file" id="prof-photo-inp" accept="image/*" style="display:none;"><button onclick="document.getElementById('prof-photo-inp').click()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">📷 Cambiar foto</button></div>`:'<div style="font-size:11px;color:var(--muted);">Foto de cuenta Google</div>'}
+      ${!S.user.photoURL?`<div><input type="file" id="prof-photo-inp" accept="image/*" style="display:none;"><button id="prof-photo-btn" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">📷 Cambiar foto</button></div>`:'<div style="font-size:11px;color:var(--muted);">Foto de cuenta Google</div>'}
       <div style="text-align:center;"><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;">${S.displayName}</div><div style="font-size:12px;color:var(--muted);">${S.user.email||''}</div></div>
     </div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;">
@@ -1545,6 +1439,10 @@ function bindEvents(sec){
     // Logout
     document.getElementById('prof-logout-btn')?.addEventListener('click',()=>{
       if(confirm('¿Cerrar sesión?')) signOut(auth);
+    });
+    // Photo button click
+    document.getElementById('prof-photo-btn')?.addEventListener('click',()=>{
+      document.getElementById('prof-photo-inp')?.click();
     });
     // Photo upload (email users only)
     document.getElementById('prof-photo-inp')?.addEventListener('change',async(e)=>{

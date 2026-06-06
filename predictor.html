@@ -412,7 +412,7 @@ body::before{
 <body>
 
 <!-- LOADING -->
-<div id="loading">
+<div id="loading" style="display:flex;">
   <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--gold);">MUNDIAL <span style="color:var(--text)">PREDICTOR</span></div>
   <div class="spinner"></div>
   <p>Cargando...</p>
@@ -883,13 +883,13 @@ function showErr(msg){ const e=document.getElementById('auth-err'); e.textConten
 function clearErr(){ const e=document.getElementById('auth-err'); e.style.display='none'; }
 
 // ── AUTH STATE ──
-// Safety timeout — if Firebase takes too long, show login
-const loadingTimeout = setTimeout(() => {
-  if(document.getElementById('loading').style.display !== 'none'){
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-  }
-}, 5000);
+// Safety timeout — show login if Firebase takes too long
+function showLogin(){
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+const loadingTimeout = setTimeout(showLogin, 3000);
 
 onAuthStateChanged(auth, async (user) => {
   clearTimeout(loadingTimeout);
